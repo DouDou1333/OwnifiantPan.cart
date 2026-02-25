@@ -3,97 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SamFW Portable Ultra</title>
+    <title>SamFW PORTABLE ULTRA PRO</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
     <style>
-        :root { --main-color: #00ff41; --bg-color: #050505; }
-        body { margin: 0; padding: 15px; background: var(--bg-color); color: var(--main-color); font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
-        h2 { text-align: center; margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid var(--main-color); padding-bottom: 10px; }
-        #terminal { flex-grow: 1; border: 1px solid var(--main-color); background: #000; padding: 10px; overflow-y: auto; font-size: 0.9rem; margin-bottom: 15px; border-radius: 4px; }
-        .log-entry { margin-bottom: 5px; word-wrap: break-word; }
-        .log-error { color: #ff3333; }
-        .log-success { color: #ffff00; }
-        button { background: var(--bg-color); color: var(--main-color); border: 2px solid var(--main-color); padding: 15px; font-size: 1rem; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; text-transform: uppercase; }
-        button:hover, button:active { background: var(--main-color); color: #000; }
-        button:disabled { border-color: #333; color: #555; cursor: not-allowed; }
+        :root { --neon: #00ff41; --bg: #050505; --panel: #111; --header: #003310; }
+        body { margin: 0; padding: 10px; background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Header & Status */
+        .status-bar { background: var(--header); padding: 5px 10px; border: 1px solid var(--neon); display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 10px; }
+        
+        /* Console */
+        #console { flex-grow: 1; border: 1px solid var(--neon); background: #000; padding: 10px; overflow-y: auto; font-size: 0.75rem; margin-bottom: 10px; box-shadow: inset 0 0 15px rgba(0,255,65,0.2); }
+        .log { border-left: 2px solid #333; padding-left: 5px; margin-bottom: 3px; }
+        .success { color: #ffff00; border-left-color: #ffff00; }
+        .err { color: #ff3333; border-left-color: #ff3333; }
+
+        /* Multi-Tools Grid */
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; max-height: 45vh; }
+        .tool-box { border: 1px solid var(--neon); background: var(--panel); padding: 8px; border-radius: 4px; }
+        .tool-box h4 { margin: 0 0 8px 0; font-size: 0.8rem; text-align: center; background: var(--neon); color: #000; padding: 2px; }
+
+        button { background: transparent; color: var(--neon); border: 1px solid var(--neon); padding: 10px 4px; cursor: pointer; font-family: monospace; font-size: 0.7rem; font-weight: bold; width: 100%; margin-bottom: 4px; }
+        button:hover { background: var(--neon); color: #000; }
+        button:disabled { border-color: #444; color: #444; }
+
+        input { background: #000; border: 1px solid var(--neon); color: var(--neon); padding: 8px; width: 100%; box-sizing: border-box; font-size: 0.75rem; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <h2>SAMFW PORTABLE ULTRA</h2>
-    
-    <div id="terminal">
-        <div class="log-entry">INITIALISATION DU SYSTÈME...</div>
+    <div class="status-bar">
+        <span>MODE: PRO-DEPLOY</span>
+        <span id="devStatus">DISCONNECTED</span>
     </div>
 
-    <button id="btnConnect">🔌 Connecter Appareil USB</button>
+    <div id="console"></div>
+
+    <div class="tool-grid">
+        <div class="tool-box" style="grid-column: span 2;">
+            <h4>🔌 CONNEXION SYSTÈME</h4>
+            <button id="btnConnect" style="font-size: 1rem; border-width: 2px;">⚡ SCANNER PORT USB</button>
+        </div>
+
+        <div class="tool-box">
+            <h4>📱 SAMSUNG (PIT/ODIN)</h4>
+            <button onclick="sendOdin('PIT_READ')">READ PIT</button>
+            <button onclick="sendOdin('REBOOT_DL')">REBOOT DOWNLOAD</button>
+            <button onclick="sendOdin('EXIT_DL')">EXIT DOWNLOAD</button>
+        </div>
+
+        <div class="tool-box">
+            <h4>⚡ FASTBOOT / ADB</h4>
+            <button onclick="sendCmd('getvar:all')">GET VAR ALL</button>
+            <button onclick="sendCmd('reboot-bootloader')">REBOOT BL</button>
+            <button onclick="sendCmd('oem device-info')">OEM INFO</button>
+        </div>
+
+        <div class="tool-box">
+            <h4>🛠️ SCRIPTS & BYPASS</h4>
+            <button onclick="runScript('FRP_BYPASS')">BYPASS FRP</button>
+            <button onclick="runScript('FACTORY_RESET')">FACTORY RESET</button>
+            <button onclick="runScript('DEBLOAT')">REMOVE BLOATWARE</button>
+        </div>
+
+        <div class="tool-box">
+            <h4>🌐 REMOTE & TUNNEL</h4>
+            <input type="text" id="remoteInput" placeholder="URL/PORT">
+            <button onclick="remoteAction('OPEN')">OPEN URL</button>
+            <button onclick="remoteAction('SSH')">SSH TUNNEL</button>
+        </div>
+    </div>
 
     <script>
-        const terminal = document.getElementById('terminal');
-        const btnConnect = document.getElementById('btnConnect');
+        const consoleEl = document.getElementById('console');
+        let device = null;
+        let epOut, epIn;
 
-        // Fonction pour écrire dans le terminal
-        function logMsg(msg, type = 'info') {
-            const div = document.createElement('div');
-            div.className = `log-entry ${type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : ''}`;
-            const time = new Date().toLocaleTimeString('fr-FR');
-            div.textContent = `[${time}] > ${msg}`;
-            terminal.appendChild(div);
-            terminal.scrollTop = terminal.scrollHeight; // Auto-scroll
+        function log(m, type='') {
+            const d = document.createElement('div');
+            d.className = `log ${type}`;
+            d.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+            consoleEl.appendChild(d);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
-        // 1. Vérification de la compatibilité WebUSB
-        if (!('usb' in navigator)) {
-            logMsg("ERREUR CRITIQUE: WebUSB n'est pas supporté sur ce navigateur. Utilisez Chrome ou Edge.", "error");
-            btnConnect.disabled = true;
-            btnConnect.textContent = "Navigateur Incompatible";
-        } else {
-            logMsg("Module WebUSB : DÉTECTÉ ET ACTIF", "success");
-        }
-
-        // 2. Gestion de la connexion USB
-        btnConnect.addEventListener('click', async () => {
+        // --- MOTEUR USB PRO ---
+        document.getElementById('btnConnect').onclick = async () => {
             try {
-                logMsg("Attente de la sélection de l'appareil...");
-                // Demande l'accès à n'importe quel appareil USB (tu pourras filtrer les vendorId plus tard)
-                const device = await navigator.usb.requestDevice({ filters: [] });
-                
-                logMsg(`Appareil sélectionné: ${device.productName || 'Appareil inconnu'}`, "info");
-                
+                device = await navigator.usb.requestDevice({ filters: [] });
                 await device.open();
-                logMsg("Session USB ouverte.", "info");
-                
-                // Sélection de la configuration par défaut si nécessaire
-                if (device.configuration === null) {
-                    await device.selectConfiguration(1);
-                    logMsg("Configuration 1 sélectionnée.", "info");
-                }
-                
-                // Réclamation de l'interface (nécessaire pour communiquer)
+                await device.selectConfiguration(1);
+                const iface = device.configuration.interfaces[0];
                 await device.claimInterface(0);
-                logMsg(`CONNEXION ÉTABLIE AVEC SUCCÈS : ${device.manufacturerName} ${device.productName}`, "success");
 
-            } catch (error) {
-                // Gestion fine des erreurs (ex: l'utilisateur a annulé)
-                if (error.name === 'NotFoundError') {
-                    logMsg("Action annulée par l'utilisateur.", "error");
-                } else if (error.name === 'SecurityError') {
-                    logMsg("Erreur de sécurité. Assurez-vous d'être en HTTPS.", "error");
-                } else {
-                    logMsg(`Échec de connexion: ${error.message}`, "error");
-                }
-            }
-        });
+                iface.alternate.endpoints.forEach(e => {
+                    if (e.direction === 'out') epOut = e.endpointNumber;
+                    if (e.direction === 'in') epIn = e.endpointNumber;
+                });
 
-        // 3. Enregistrement du Service Worker (Pour le mode PWA/Hors-ligne)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => logMsg("Service Worker enregistré (Mode hors-ligne actif)."))
-                    .catch(err => logMsg(`Erreur Service Worker: ${err}`, "error"));
-            });
+                document.getElementById('devStatus').textContent = device.productName;
+                log(`CONNECTED: ${device.productName}`, 'success');
+            } catch (e) { log(`USB ERROR: ${e.message}`, 'err'); }
+        };
+
+        // --- ENVOI DE COMMANDES BINAIRES ---
+        async function sendRaw(data) {
+            if (!device) return log("ERROR: No Device", "err");
+            try {
+                const enc = new TextEncoder();
+                await device.transferOut(epOut, enc.encode(data));
+                const res = await device.transferIn(epIn, 1024);
+                const dec = new TextDecoder();
+                log(`RES: ${dec.decode(res.data)}`, 'success');
+            } catch (e) { log(`TRANS_ERR: ${e.message}`, 'err'); }
         }
+
+        // --- LOGIQUE DES OUTILS ---
+        function sendCmd(c) { log(`CMD: ${c}`, 'success'); sendRaw(c); }
+        function sendOdin(a) { log(`ODIN_ACTION: ${a}`, 'success'); /* Odin Protocol logic */ }
+        function runScript(s) { log(`RUNNING SCRIPT: ${s}...`, 'success'); }
+        function remoteAction(t) { 
+            const val = document.getElementById('remoteInput').value;
+            log(`${t} ACTION ON: ${val}`); 
+        }
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
     </script>
 </body>
 </html>
