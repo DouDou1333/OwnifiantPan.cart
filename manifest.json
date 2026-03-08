@@ -1,21 +1,30 @@
 {
-  "name": "SamFW Portable Ultra PRO",
-  "short_name": "SamFW PRO",
-  "description": "Interface de dépannage USB professionnelle",
-  "start_url": "index.html",
+  "name": "CORE V17 LOG MONITOR OMEGA - Samsung USB Tool",
+  "short_name": "S21 FE Tool",
+  "description": "Outil pédagogique WebUSB pour contrôle Samsung en mode simulation isolée (Download/Factory mode)",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#050505",
-  "theme_color": "#00ff41",
+  "background_color": "#000000",
+  "theme_color": "#00ff9f",
+  "orientation": "any",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2521/2521629.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2521/2521629.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "scope": "/",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "categories": ["developer", "tools", "utilities"],
+  "dir": "ltr",
+  "lang": "fr-FR"
 }
