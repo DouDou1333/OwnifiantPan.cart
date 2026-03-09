@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - CORE V17 LOG MONITOR OMEGA</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#000000">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: #00ff9f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { font-size: 2.5em; margin-bottom: 20px; }
+    p { font-size: 1.2em; max-width: 600px; line-height: 1.5; }
+    .icon { font-size: 8em; margin-bottom: 30px; }
+    button {
+      background: #00ff9f;
+      color: #000;
+      border: none;
+      padding: 16px 40px;
+      font-size: 1.3em;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 30px;
+    }
+    button:hover { background: #00cc7f; }
+  </style>
+</head>
+<body>
+  <div class="icon">⚠️</div>
+  <h1>MODE OFFLINE</h1>
+  <p>Pas de connexion réseau détectée.</p>
+  <p>Pour continuer les opérations USB (simulation isolée uniquement), reconnectez-vous au réseau ou branchez votre appareil Samsung en mode Download quand possible.</p>
+  <p>Cet outil pédagogique fonctionne en cache local une fois chargé, mais les interactions USB nécessitent une session active.</p>
+  <button onclick="window.location.href = '/'">Retour à l'outil (quand connecté)</button>
+</body>
+</html>
