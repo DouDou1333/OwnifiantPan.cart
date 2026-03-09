@@ -1,41 +1,40 @@
-// sw.js - Version clean et fonctionnelle pour ton tool Samsung WebUSB
+// sw.js - Version corrigée, complète et stable pour ta PWA
 
-const CACHE_NAME = 'samsung-tool-cache-v2';  // Change le v2 si tu updates
+const CACHE_NAME = 'samsung-tool-cache-v3';  // Change le numéro si tu modifies plus tard
 
 const ASSETS = [
-  '/',                    // Racine
+  '/',
   '/index.html',
   '/manifest.json',
-  '/script.js',           // Remplace par le vrai nom de ton fichier JS principal (app.js ? main.js ?)
-  // Ajoute tes autres fichiers si tu en as : CSS, images, etc.
+  '/script.js',               // ← change en 'app.js' ou le vrai nom de ton fichier JS si différent
   '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
-  // Si tu as une page offline.html : '/offline.html'
+  '/icons/icon-512x512.png',
+  '/offline.html'             // ← la nouvelle page offline
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[SW] Cache installé');
+        console.log('[SW] Installation - Cache des assets');
         return cache.addAll(ASSETS);
       })
-      .catch(err => console.error('[SW] Erreur install cache:', err))
+      .catch(err => console.error('[SW] Erreur lors du cache install:', err))
   );
-  // Skip waiting pour activer immédiatement le nouveau SW
-  self.skipWaiting();
+  self.skipWaiting();  // Active immédiatement le nouveau SW
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
+        cacheNames
+          .filter(name => name !== CACHE_NAME)
           .map(name => caches.delete(name))
       );
     }).then(() => {
-      console.log('[SW] Anciens caches supprimés');
-      return self.clients.claim();  // Prend le contrôle immédiatement
+      console.log('[SW] Anciens caches nettoyés');
+      return self.clients.claim();  // Prend le contrôle des onglets ouverts
     })
   );
 });
@@ -43,16 +42,18 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        // Si dans le cache → renvoie direct
-        if (response) {
-          return response;
+      .then(cachedResponse => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        // Sinon fetch réseau + fallback si échec (offline)
+
         return fetch(event.request).catch(() => {
-          // Optionnel : renvoie la page principale ou une page offline dédiée
-          return caches.match('/');
-          // Ou si tu crées offline.html : caches.match('/offline.html');
+          // Fallback uniquement pour les pages (navigation)
+          if (event.request.mode === 'navigate') {
+            return caches.match('/offline.html');
+          }
+          // Pour les autres ressources (images, js, css...) → erreur silencieuse
+          return new Response('', { status: 503 });
         });
       })
   );
